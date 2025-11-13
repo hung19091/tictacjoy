@@ -2,11 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Confetti from 'react-confetti';
 import { RefreshCw } from 'lucide-react';
-import { useGameStore } from '@/hooks/useGameStore';
+import { useGameStore, Player } from '@/hooks/useGameStore';
 import { IconX, IconO } from '@/components/game/GameIcons';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-const PlayerIcon = ({ player }: { player: 'X' | 'O' }) => {
+const PlayerIcon = ({ player }: { player: Player | null }) => {
   if (player === 'X') return <IconX />;
   if (player === 'O') return <IconO />;
   return null;
@@ -47,30 +47,72 @@ const StatusDisplay = () => {
     </div>
   );
 };
+const lineCoordinates: { [key: string]: { x1: number; y1: number; x2: number; y2: number } } = {
+  // Rows
+  '0,1,2': { x1: 5, y1: 16.66, x2: 95, y2: 16.66 },
+  '3,4,5': { x1: 5, y1: 50, x2: 95, y2: 50 },
+  '6,7,8': { x1: 5, y1: 83.33, x2: 95, y2: 83.33 },
+  // Columns
+  '0,3,6': { x1: 16.66, y1: 5, x2: 16.66, y2: 95 },
+  '1,4,7': { x1: 50, y1: 5, x2: 50, y2: 95 },
+  '2,5,8': { x1: 83.33, y1: 5, x2: 83.33, y2: 95 },
+  // Diagonals
+  '0,4,8': { x1: 10, y1: 10, x2: 90, y2: 90 },
+  '2,4,6': { x1: 90, y1: 10, x2: 10, y2: 90 },
+};
+const WinningLine = ({ line }: { line: number[] }) => {
+  const winner = useGameStore((s) => s.winner);
+  const coords = lineCoordinates[line.join(',')];
+  if (!coords || winner === 'draw') return null;
+  return (
+    <motion.svg
+      className="absolute top-0 left-0 w-full h-full pointer-events-none"
+      viewBox="0 0 100 100"
+      initial={{ pathLength: 0 }}
+      animate={{ pathLength: 1 }}
+      transition={{ duration: 0.5, ease: 'easeInOut' }}
+    >
+      <line
+        {...coords}
+        className={cn(
+          'stroke-[8]',
+          winner === 'X' ? 'stroke-playful-blue/80' : 'stroke-playful-yellow/80'
+        )}
+        strokeLinecap="round"
+      />
+    </motion.svg>
+  );
+};
 const GameBoard = () => {
   const board = useGameStore((s) => s.board);
   const makeMove = useGameStore((s) => s.makeMove);
   const winner = useGameStore((s) => s.winner);
+  const winningLine = useGameStore((s) => s.winningLine);
   return (
-    <div className="grid grid-cols-3 gap-3 md:gap-4 p-3 md:p-4 bg-secondary rounded-3xl shadow-lg">
-      {board.map((cell, index) => (
-        <motion.div
-          key={index}
-          className="relative aspect-square bg-playful-background rounded-2xl flex items-center justify-center cursor-pointer"
-          onClick={() => makeMove(index)}
-          whileHover={{ scale: cell || winner ? 1 : 1.05 }}
-          whileTap={{ scale: cell || winner ? 1 : 0.95 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-        >
-          <AnimatePresence>
-            {cell && (
-              <div className="absolute inset-0 p-4">
-                <PlayerIcon player={cell} />
-              </div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-      ))}
+    <div className="relative">
+      <div className="grid grid-cols-3 gap-3 md:gap-4 p-3 md:p-4 bg-secondary rounded-3xl shadow-lg">
+        {board.map((cell, index) => (
+          <motion.div
+            key={index}
+            className="relative aspect-square bg-playful-background rounded-2xl flex items-center justify-center cursor-pointer"
+            onClick={() => makeMove(index)}
+            whileHover={{ scale: cell || winner ? 1 : 1.05 }}
+            whileTap={{ scale: cell || winner ? 1 : 0.95 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+          >
+            <AnimatePresence>
+              {cell && (
+                <div className="absolute inset-0 p-4">
+                  <PlayerIcon player={cell} />
+                </div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        ))}
+      </div>
+      <AnimatePresence>
+        {winningLine && <WinningLine line={winningLine} />}
+      </AnimatePresence>
     </div>
   );
 };
@@ -143,7 +185,7 @@ export function HomePage() {
             </motion.div>
           </main>
           <footer className="absolute bottom-4 text-center text-muted-foreground/80 text-sm">
-            <p>Built with ��️ at Cloudflare</p>
+            <p>Built with ❤��� at Cloudflare</p>
           </footer>
         </div>
       </div>
