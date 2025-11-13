@@ -140,7 +140,13 @@ export default {
   				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
-  			}
+  			},
+        playful: {
+          blue: '#3B82F6',
+          yellow: '#FBBF24',
+          pink: '#EC4899',
+          background: 'hsl(var(--playful-background))',
+        }
   		},
   		boxShadow: {
   			soft: '0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04)',

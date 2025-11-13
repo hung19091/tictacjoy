@@ -1,148 +1,152 @@
-// Home page of the app, Currently a demo page for demonstration.
-// Please rewrite this file to implement your own logic. Do not replace or delete it, simply rewrite this HomePage.tsx file.
-import { useEffect } from 'react'
-import { Sparkles } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { ThemeToggle } from '@/components/ThemeToggle'
-import { Toaster, toast } from '@/components/ui/sonner'
-import { create } from 'zustand'
-import { useShallow } from 'zustand/react/shallow'
-import { AppLayout } from '@/components/layout/AppLayout'
-
-// Timer store: independent slice with a clear, minimal API, for demonstration
-type TimerState = {
-  isRunning: boolean;
-  elapsedMs: number;
-  start: () => void;
-  pause: () => void;
-  reset: () => void;
-  tick: (deltaMs: number) => void;
-}
-
-const useTimerStore = create<TimerState>((set) => ({
-  isRunning: false,
-  elapsedMs: 0,
-  start: () => set({ isRunning: true }),
-  pause: () => set({ isRunning: false }),
-  reset: () => set({ elapsedMs: 0, isRunning: false }),
-  tick: (deltaMs) => set((s) => ({ elapsedMs: s.elapsedMs + deltaMs })),
-}))
-
-// Counter store: separate slice to showcase multiple stores without coupling
-type CounterState = {
-  count: number;
-  inc: () => void;
-  reset: () => void;
-}
-
-const useCounterStore = create<CounterState>((set) => ({
-  count: 0,
-  inc: () => set((s) => ({ count: s.count + 1 })),
-  reset: () => set({ count: 0 }),
-}))
-
-function formatDuration(ms: number): string {
-  const total = Math.max(0, Math.floor(ms / 1000))
-  const m = Math.floor(total / 60)
-  const s = total % 60
-  return `${m}:${s.toString().padStart(2, '0')}`
-}
-
-export function HomePage() {
-  // Select only what is needed to avoid unnecessary re-renders
-  const { isRunning, elapsedMs } = useTimerStore(
-    useShallow((s) => ({ isRunning: s.isRunning, elapsedMs: s.elapsedMs })),
-  )
-  const start = useTimerStore((s) => s.start)
-  const pause = useTimerStore((s) => s.pause)
-  const resetTimer = useTimerStore((s) => s.reset)
-  const count = useCounterStore((s) => s.count)
-  const inc = useCounterStore((s) => s.inc)
-  const resetCount = useCounterStore((s) => s.reset)
-
-  // Drive the timer only while running; avoid update-depth issues with a scoped RAF
-  useEffect(() => {
-    if (!isRunning) return
-    let raf = 0
-    let last = performance.now()
-    const loop = () => {
-      const now = performance.now()
-      const delta = now - last
-      last = now
-      // Read store API directly to keep effect deps minimal and stable
-      useTimerStore.getState().tick(delta)
-      raf = requestAnimationFrame(loop)
-    }
-    raf = requestAnimationFrame(loop)
-    return () => cancelAnimationFrame(raf)
-  }, [isRunning])
-
-  const onPleaseWait = () => {
-    inc()
-    if (!isRunning) {
-      start()
-      toast.success('Building your app…', {
-        description: 'Hang tight, we\'re setting everything up.',
-      })
-    } else {
-      pause()
-      toast.info('Taking a short pause', {
-        description: 'We\'ll continue shortly.',
-      })
-    }
-  }
-
-  const formatted = formatDuration(elapsedMs)
-
-  return (
-    <AppLayout>
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-4 overflow-hidden relative">
-        <ThemeToggle />
-        <div className="absolute inset-0 bg-gradient-rainbow opacity-10 dark:opacity-20 pointer-events-none" />
-        <div className="text-center space-y-8 relative z-10 animate-fade-in">
-          <div className="flex justify-center">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-primary floating">
-              <Sparkles className="w-8 h-8 text-white rotating" />
-            </div>
-          </div>
-          <h1 className="text-5xl md:text-7xl font-display font-bold text-balance leading-tight">
-            Creating your <span className="text-gradient">app</span>
-          </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto text-pretty">
-            Your application would be ready soon.
-          </p>
-          <div className="flex justify-center gap-4">
-            <Button 
-              size="lg"
-              onClick={onPleaseWait}
-              className="btn-gradient px-8 py-4 text-lg font-semibold hover:-translate-y-0.5 transition-all duration-200"
-              aria-live="polite"
-            >
-              Please Wait
-            </Button>
-          </div>
-          <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
-            <div>
-              Time elapsed: <span className="font-medium tabular-nums text-foreground">{formatted}</span>
-            </div>
-            <div>
-              Coins: <span className="font-medium tabular-nums text-foreground">{count}</span>
-            </div>
-          </div>
-          <div className="flex justify-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => { resetTimer(); resetCount(); toast('Reset complete') }}>
-              Reset
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => { inc(); toast('Coin added') }}>
-              Add Coin
-            </Button>
-          </div>
+import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import Confetti from 'react-confetti';
+import { RefreshCw } from 'lucide-react';
+import { useGameStore } from '@/hooks/useGameStore';
+import { IconX, IconO } from '@/components/game/GameIcons';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+const PlayerIcon = ({ player }: { player: 'X' | 'O' }) => {
+  if (player === 'X') return <IconX />;
+  if (player === 'O') return <IconO />;
+  return null;
+};
+const StatusDisplay = () => {
+  const winner = useGameStore((s) => s.winner);
+  const currentPlayer = useGameStore((s) => s.currentPlayer);
+  const getStatusMessage = () => {
+    if (winner) {
+      if (winner === 'draw') {
+        return "It's a Draw!";
+      }
+      return (
+        <div className="flex items-center justify-center gap-2">
+          Player <span className={cn("font-bold", winner === 'X' ? 'text-playful-blue' : 'text-playful-yellow')}>{winner}</span> Wins!
         </div>
-        <footer className="absolute bottom-8 text-center text-muted-foreground/80">
-          <p>Powered by Cloudflare</p>
-        </footer>
-        <Toaster richColors closeButton />
+      );
+    }
+    return (
+      <div className="flex items-center justify-center gap-2">
+        <span className={cn("font-bold", currentPlayer === 'X' ? 'text-playful-blue' : 'text-playful-yellow')}>{currentPlayer}'s</span> Turn
       </div>
-    </AppLayout>
-  )
+    );
+  };
+  return (
+    <div className="text-2xl md:text-3xl font-semibold text-foreground text-center h-10">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={winner ? `winner-${winner}` : `player-${currentPlayer}`}
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          transition={{ duration: 0.3 }}
+        >
+          {getStatusMessage()}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+};
+const GameBoard = () => {
+  const board = useGameStore((s) => s.board);
+  const makeMove = useGameStore((s) => s.makeMove);
+  const winner = useGameStore((s) => s.winner);
+  return (
+    <div className="grid grid-cols-3 gap-3 md:gap-4 p-3 md:p-4 bg-secondary rounded-3xl shadow-lg">
+      {board.map((cell, index) => (
+        <motion.div
+          key={index}
+          className="relative aspect-square bg-playful-background rounded-2xl flex items-center justify-center cursor-pointer"
+          onClick={() => makeMove(index)}
+          whileHover={{ scale: cell || winner ? 1 : 1.05 }}
+          whileTap={{ scale: cell || winner ? 1 : 0.95 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+        >
+          <AnimatePresence>
+            {cell && (
+              <div className="absolute inset-0 p-4">
+                <PlayerIcon player={cell} />
+              </div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      ))}
+    </div>
+  );
+};
+export function HomePage() {
+  const resetGame = useGameStore((s) => s.resetGame);
+  const winner = useGameStore((s) => s.winner);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+    };
+    window.addEventListener('resize', handleResize);
+    handleResize();
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  useEffect(() => {
+    if (winner && winner !== 'draw') {
+      setShowConfetti(true);
+      const timer = setTimeout(() => setShowConfetti(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [winner]);
+  return (
+    <div className="bg-playful-background min-h-screen text-foreground">
+      {showConfetti && <Confetti width={windowSize.width} height={windowSize.height} recycle={false} numberOfPieces={400} />}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen flex flex-col items-center justify-center py-12 md:py-16">
+          <main className="w-full max-w-md mx-auto flex flex-col items-center space-y-8">
+            <motion.div
+              initial={{ opacity: 0, y: -50 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              <h1 className="text-5xl md:text-6xl font-display font-bold text-center">
+                <span className="text-playful-blue">Tic</span>
+                <span className="text-playful-pink">Tac</span>
+                <span className="text-playful-yellow">Joy</span>
+              </h1>
+            </motion.div>
+            <motion.div
+              className="w-full"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              <StatusDisplay />
+            </motion.div>
+            <motion.div
+              className="w-full"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.5 }}
+            >
+              <GameBoard />
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.7 }}
+            >
+              <Button
+                onClick={resetGame}
+                size="lg"
+                className="bg-playful-pink text-white hover:bg-playful-pink/90 rounded-full px-8 py-6 text-lg font-bold shadow-lg transition-transform duration-200 hover:scale-105 active:scale-95"
+              >
+                <RefreshCw className="mr-2 h-5 w-5" />
+                Reset Game
+              </Button>
+            </motion.div>
+          </main>
+          <footer className="absolute bottom-4 text-center text-muted-foreground/80 text-sm">
+            <p>Built with ��️ at Cloudflare</p>
+          </footer>
+        </div>
+      </div>
+    </div>
+  );
 }
