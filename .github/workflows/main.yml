@@ -1,0 +1,14 @@
+            - name: Setup React
+  # You may pin to the exact commit or the version.
+  # uses: kirkeaton/setup-react@f44b147594605c7d3651a757a6292136c010647e
+  uses: kirkeaton/setup-react@v1.0.5
+  with:
+    # The React version to install.
+    react-version: 
+    # The React DOM version to install.
+    react-dom-version: 
+    # The React types version to install.
+    react-types-version: # optional
+    # The React DOM types version to install.
+    react-dom-types-version: # optional
+          
