@@ -1,6 +1,7 @@
 # TicTacJoy
 
 A visually stunning and playful Tic-Tac-Toe game with delightful animations and a kid-friendly design.
+...
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/hung19091/tictacjoy)
 
