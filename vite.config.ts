@@ -89,6 +89,7 @@ function watchDependenciesPlugin() {
 export default ({ mode }: { mode: string }) => {
   const env = loadEnv(mode, process.cwd());
   return defineConfig({
+    base: '/tictacjoy/',
     plugins: [react(), cloudflare(), watchDependenciesPlugin()],
     build: {
       minify: true,
