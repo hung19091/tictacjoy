@@ -5,13 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port ${PORT:-3000}",
+    "build": "vite build",
     "lint": "eslint --cache -f json --quiet .",
     "preview": "bun run build && vite preview --host 0.0.0.0 --port ${PORT:-4173}",
     "deploy": "bun run build && wrangler deploy",
-    "cf-typegen": "wrangler types",
-    
-    "start": "react-scripts start",
-    "build": "react-scripts build"
+    "cf-typegen": "wrangler types"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
